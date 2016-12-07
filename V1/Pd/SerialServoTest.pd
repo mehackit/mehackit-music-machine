@@ -1,0 +1,10 @@
+#N canvas 104 194 450 300 10;
+#X msg 221 88 devices;
+#X obj 225 140 comport 5;
+#X msg 145 92 print A;
+#X msg 118 136 print B;
+#X obj 219 192 print;
+#X connect 0 0 1 0;
+#X connect 1 0 4 0;
+#X connect 2 0 1 0;
+#X connect 3 0 1 0;
