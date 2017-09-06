@@ -142,7 +142,6 @@ int newTempo = 120;
 long interval;
 unsigned long nextPosition = 0;
 int position = 0;
-int note = 0;
 int channel = 1;
 
 void setup() {
@@ -154,7 +153,7 @@ void setup() {
 
 void loop() {
   if (micros() > nextPosition) {
-    if (note % 2 == 0) {
+    if (position % 2 == 0) {
       nextPosition = micros() + (interval * (1 - swing));
     } else {
       nextPosition = micros() + (interval * (1 + swing));
@@ -168,18 +167,23 @@ void loop() {
       buttonPressed = true;
       Serial.print("Button pressed: ");
       Serial.println(lastSwing);
+
+      //Send random midi note
+      int i = random(8);
+      MIDI.sendNoteOn(midiNotes[i][0], 127, channel);
+      MIDI.sendNoteOn(midiNotes[i][1], 127, channel);
     } else {
       buttonPressed = false;
       Serial.println("Button released");
     }
   }
-  
+
   if (buttonPressed) {
     newSwing = asTempo.smooth(analogRead(tempoPin));
     if (abs(newSwing - lastSwing) > 3) {
-     lastSwing = newSwing;
-     swing = (map(newSwing, 0, 1024, 0, 250)) / 1000.0;
-     Serial.println(swing);
+      lastSwing = newSwing;
+      swing = (map(newSwing, 0, 1024, 0, 50)) / 100.0;
+      Serial.println(swing);
     }
   } else {
     newTempo = asTempo.smooth(analogRead(tempoPin));
@@ -193,33 +197,28 @@ void loop() {
 }
 
 unsigned long bpmToInterval(int bpm) {
-  unsigned long interval = 60000000 / (bpm * (SEQ_LENGTH / 2));
+  unsigned long interval = 60 * 1000 * 1000 / bpm / 4;
   return interval;
 }
 
 void advance() {
-  if (position % 2 == 0) {
-    for (int i = 0; sequences[i]; i++) {
-      int seqNumber = map(analogRead(sequencePins[i]), 0, 1024, 0, 8);
-      //Serial.print("Knob ");
-      //Serial.print(i);
-      //Serial.print(" = ");
-      //Serial.print(seqNumber);
-      //Serial.print("\t");
-      if (sequences[i][seqNumber][note]) {
-        MIDI.sendNoteOn(midiNotes[i][0], 127, channel);
-        MIDI.sendNoteOn(midiNotes[i][1], 127, channel);
-      }
-    }
-    //Serial.println();
-  } else {
-    for (int i = 0; i < 8; ++i) {
-      MIDI.sendNoteOff(midiNotes[i][0], 127, channel);
-      MIDI.sendNoteOff(midiNotes[i][1], 127, channel);
-    }
-    note = (note + 1) % SEQ_LENGTH;
+  // Send midi off for all notes
+  for (int i = 0; i < 8; ++i) {
+    MIDI.sendNoteOff(midiNotes[i][0], 127, channel);
+    MIDI.sendNoteOff(midiNotes[i][1], 127, channel);
   }
-  position = (position + 1) % (SEQ_LENGTH * 2);
+
+  // Send midi on corresponding to the sequences
+  for (int i = 0; sequences[i]; i++) {
+    int seqNumber = map(analogRead(sequencePins[i]), 0, 1024, 0, 8);
+    if (sequences[i][seqNumber][position]) {
+      MIDI.sendNoteOn(midiNotes[i][0], 127, channel);
+      MIDI.sendNoteOn(midiNotes[i][1], 127, channel);
+    }
+  }
+
+  // Advance
+  position = (position + 1) % SEQ_LENGTH;
 }
 
 
