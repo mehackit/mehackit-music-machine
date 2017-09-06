@@ -1,15 +1,25 @@
+/**
+   Mehackit Music Machine Sequencer
+
+   Music Machine Sequencer is a Teensy based sequencer
+   with 8 knobs that choose between predefined sequences.
+
+   Otso Sorvettula / Mehackit 2017
+*/
+
 #include <AnalogSmooth.h>
 #include <MIDI.h>
+#include <Bounce.h>
 
 int midiNotes[8][2] = {
-  {0,8},
-  {1,9},
-  {2,10},
-  {3,11},
-  {4,12},
-  {5,13},
-  {6,14},
-  {7,15},
+  {0, 8},
+  {1, 9},
+  {2, 10},
+  {3, 11},
+  {4, 12},
+  {5, 13},
+  {6, 14},
+  {7, 15},
 };
 
 bool sequence1[10][16] = {
@@ -118,10 +128,16 @@ const int pin7 = A6;
 const int pin8 = A7;
 const int sequencePins[8] = {pin1, pin2, pin3, pin4, pin5, pin6, pin7, pin8};
 
+const int buttonPin = 2;
+Bounce pushbutton = Bounce(buttonPin, 10);
+byte buttonPressed = true;
+float swing = 0; //Swing in percentage
+float lastSwing = 0;
+float newSwing = 0;
+
 AnalogSmooth asTempo = AnalogSmooth(100);
 int tempo = 120;
 int newTempo = 120;
-
 
 long interval;
 unsigned long nextPosition = 0;
@@ -133,26 +149,46 @@ void setup() {
   Serial.begin(9600);
   MIDI.begin();
   interval = bpmToInterval(tempo);
+  pinMode(buttonPin, INPUT_PULLUP);
 }
 
 void loop() {
-  newTempo = asTempo.smooth(analogRead(tempoPin));
-  newTempo = map(newTempo, 0, 1024, 40, 240);
-  if (newTempo != tempo) {
-    tempo = newTempo;
-    Serial.println(tempo);
-    interval = bpmToInterval(tempo);
-  }
-
-
-
   if (micros() > nextPosition) {
     if (note % 2 == 0) {
-      nextPosition = micros() + (interval * 0.95);
+      nextPosition = micros() + (interval * (1 - swing));
     } else {
-      nextPosition = micros() + (interval * 1.05);
+      nextPosition = micros() + (interval * (1 + swing));
     }
     advance();
+  }
+
+  if (pushbutton.update()) {
+    if (pushbutton.fallingEdge()) {
+      lastSwing = asTempo.smooth(analogRead(tempoPin));
+      buttonPressed = true;
+      Serial.print("Button pressed: ");
+      Serial.println(lastSwing);
+    } else {
+      buttonPressed = false;
+      Serial.println("Button released");
+    }
+  }
+  
+  if (buttonPressed) {
+    newSwing = asTempo.smooth(analogRead(tempoPin));
+    if (abs(newSwing - lastSwing) > 3) {
+     lastSwing = newSwing;
+     swing = (map(newSwing, 0, 1024, 0, 250)) / 1000.0;
+     Serial.println(swing);
+    }
+  } else {
+    newTempo = asTempo.smooth(analogRead(tempoPin));
+    newTempo = map(newTempo, 0, 1024, 40, 240);
+    if (abs(newTempo - tempo) > 1) {
+      tempo = newTempo;
+      Serial.println(tempo);
+      interval = bpmToInterval(tempo);
+    }
   }
 }
 
@@ -165,17 +201,17 @@ void advance() {
   if (position % 2 == 0) {
     for (int i = 0; sequences[i]; i++) {
       int seqNumber = map(analogRead(sequencePins[i]), 0, 1024, 0, 8);
-        Serial.print("Knob ");
-        Serial.print(i);
-        Serial.print(" = ");
-        Serial.print(seqNumber);
-        Serial.print("\t");
+      //Serial.print("Knob ");
+      //Serial.print(i);
+      //Serial.print(" = ");
+      //Serial.print(seqNumber);
+      //Serial.print("\t");
       if (sequences[i][seqNumber][note]) {
         MIDI.sendNoteOn(midiNotes[i][0], 127, channel);
         MIDI.sendNoteOn(midiNotes[i][1], 127, channel);
       }
     }
-    Serial.println();
+    //Serial.println();
   } else {
     for (int i = 0; i < 8; ++i) {
       MIDI.sendNoteOff(midiNotes[i][0], 127, channel);

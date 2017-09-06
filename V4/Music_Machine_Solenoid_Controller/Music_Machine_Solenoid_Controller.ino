@@ -1,3 +1,17 @@
+/**
+ * Mehackit Music Machine Solenoid Controller
+ * 
+ * Solenoid controller is a custom ATMEGA board that takes in MIDI
+ * and opens VIN current through a corresponding transistor i.e. triggers
+ * a salonoid based on the incoming MIDI.
+ * 
+ * A 3 bit DIP-switch defines the MIDI notes. 0 is notes 0-7, 1 is 8-15 etc.
+ * When a MIDI note on is received, a solenoid is triggered for 50ms. All midi
+ * is passed to MIDI through.
+ * 
+ * Otso Sorvettula / Mehackit 2017
+ */
+
 #include <MIDI.h>  // Add Midi Library
 #define ledPin 13
 #define S1 12
@@ -13,6 +27,9 @@
 int solenoids[ammountOfSolenoids] = {S1, S2, S3, S4, S5, S6, S7, S8};
 int dipPins[3] = {4,3,2};
 int scale = 0;
+long notesOff[ammountOfSolenoids];
+unsigned long noteLength = 30;
+unsigned long now = 0;
 
 //Create an instance of the library with default name, serial port and settings
 MIDI_CREATE_DEFAULT_INSTANCE();
@@ -32,6 +49,10 @@ void setup() {
     pinMode(dipPins[i], INPUT_PULLUP);
   }
 
+  for (int i = 0; i < ammountOfSolenoids; i++) {
+    notesOff[i] = 0;
+  }
+
   scale = getDipPinsValToInt();
 
   MIDI.begin(MIDI_CHANNEL_OMNI); //Listen to all MIDI channels
@@ -41,6 +62,12 @@ void setup() {
 
 void loop() { // Main loop
   MIDI.read(); // Continuously check if Midi data has been received.
+  now = millis();
+  for (int i = 0; i < ammountOfSolenoids; i++) {
+    if (notesOff[i] < now) {
+      digitalWrite(solenoids[i], LOW);
+    }
+  }
 }
 
 int getDipPinsValToInt() {
@@ -62,6 +89,7 @@ void MyHandleNoteOn(byte channel, byte pitch, byte velocity) {
   int solenoid = pitch - ammountOfSolenoids * scale;
   if (solenoid >= 0 && solenoid < ammountOfSolenoids) {
     digitalWrite(solenoids[solenoid], HIGH);
+    notesOff[solenoid] = millis() + noteLength;
   }
 }
 
@@ -71,9 +99,5 @@ void MyHandleNoteOn(byte channel, byte pitch, byte velocity) {
 // It will be passed bytes for Channel, Pitch, and Velocity
 void MyHandleNoteOff(byte channel, byte pitch, byte velocity) {
   digitalWrite(ledPin, LOW);
-  int solenoid = pitch - ammountOfSolenoids * scale;
-  if (solenoid >= 0 && solenoid < ammountOfSolenoids) {
-    digitalWrite(solenoids[solenoid], LOW);
-  }
 }
 
