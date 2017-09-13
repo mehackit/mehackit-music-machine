@@ -239,7 +239,7 @@ void advance() {
 
   // Send midi on corresponding to the sequences
   for (int i = 0; sequences[i]; i++) {
-    int seqNumber = map(analogRead(sequencePins[i]), 0, 1024, 0, 10);
+    int seqNumber = map(analogRead(sequencePins[i]), 0, 1024, 0, 9);
     Serial.println(seqNumber);
     if (sequences[i][seqNumber][position]) {
       if (useFirstNote[i]) {
