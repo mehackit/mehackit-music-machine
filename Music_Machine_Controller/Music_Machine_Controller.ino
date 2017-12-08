@@ -36,8 +36,8 @@ int scale = 0;
 long notesOff[ammountOfSolenoids];
 unsigned long noteLength = 30;
 unsigned long now = 0;
-int servo1Angle = 0;
-int servo2Angle = 0;
+boolean servo1AtOrigin = true;
+boolean servo2AtOrigin = true;
 Servo servo1;
 Servo servo2;
 
@@ -70,8 +70,8 @@ void setup() {
 
   servo1.attach(SERVO_1_PIN);
   servo2.attach(SERVO_2_PIN);
-  servo1.write(servo1Angle);
-  servo2.write(servo2Angle);
+  //servo1.write(0);
+  //servo2.write(0);
 }
 
 void loop() { // Main loop
@@ -115,13 +115,20 @@ void MyHandleNoteOn(byte channel, byte pitch, byte velocity) {
 
 void turnServo(int note) {
   if (note == SERVO_1_NOTE) {
-    int a = (servo1Angle + 180) % 360; //this is allways 0 or 180
-    servo1.write(a);
-  } else if(note == SERVO_2_NOTE) {
-    int a = (servo2Angle + 180) % 360; //this is allways 0 or 180
-    servo1.write(a);
+    if (servo1AtOrigin) {
+      servo1.write(150);
+    } else {
+      servo1.write(30);
+    }
+    servo1AtOrigin = !servo1AtOrigin;
+  } else if (note == SERVO_2_NOTE) {
+    if (servo2AtOrigin) {
+      servo2.write(150);
+    } else {
+      servo2.write(30);
+    }
+    servo2AtOrigin = !servo2AtOrigin;
   }
-
 }
 
 // MyHandleNoteOFF is the function that will be called by the Midi Library
