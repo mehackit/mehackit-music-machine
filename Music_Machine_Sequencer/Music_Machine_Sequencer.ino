@@ -12,6 +12,7 @@
 #include <AnalogSmooth.h>
 #include <MIDI.h>
 #include <Bounce.h>
+MIDI_CREATE_DEFAULT_INSTANCE();
 
 boolean useFirstNote[8] = {1, 1, 1, 1, 1, 1, 1, 1};
 
@@ -27,7 +28,7 @@ int midiNotes[8][2] = {
 };
 
 // Kick
-bool sequence1[10][16] = {
+const bool sequence1[10][16] = {
   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
   {1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
   {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0},
